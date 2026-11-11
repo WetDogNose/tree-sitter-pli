@@ -78,3 +78,114 @@ END P;
         (preprocessor_simple))
       (end_statement
         (identifier)))))
+
+================================================================================
+preprocessor procedure, select, iterate and leave
+================================================================================
+%DOUBLE: PROCEDURE(N) RETURNS(FIXED);
+  DECLARE N FIXED;
+  RETURN(N * 2);
+%END DOUBLE;
+%BANNER: PROC(TXT) STATEMENT;
+  ANSWER ('PUT SKIP LIST(' || QUOTE(TXT) || ');');
+%END BANNER;
+%ACTIVATE DOUBLE, BANNER;
+%SELECT (REGION);
+  %WHEN (1) %DO;
+    DCL A FIXED;
+  %END;
+  %OTHERWISE %DO;
+    DCL B FIXED;
+  %END;
+%END;
+%DO K = 1 TO 10;
+  %IF K = 3 %THEN %ITERATE;
+  %IF K = 6 %THEN %LEAVE;
+%END;
+%DO SKIP;
+  DCL C FIXED;
+%END;
+BANNER('DEMO');
+--------------------------------------------------------------------------------
+
+(source_file
+  (preprocessor_procedure
+    (identifier)
+    (identifier)
+    (attribute_spec
+      (fixed_attribute))
+    (declare_statement
+      (declaration_item
+        (identifier)
+        (fixed_attribute)))
+    (return_statement
+      (binary_expression
+        (reference
+          (identifier))
+        (number)))
+    (identifier))
+  (preprocessor_procedure
+    (identifier)
+    (identifier)
+    (invocation_statement
+      (identifier)
+      (argument_list
+        (argument
+          (binary_expression
+            (binary_expression
+              (string_literal)
+              (reference
+                (identifier)
+                (argument
+                  (reference
+                    (identifier)))))
+            (string_literal)))))
+    (identifier))
+  (preprocessor_simple
+    (identifier)
+    (identifier))
+  (preprocessor_select_statement
+    (reference
+      (identifier))
+    (preprocessor_when_clause
+      (number)
+      (preprocessor_do_statement
+        (declare_statement
+          (declaration_item
+            (identifier)
+            (fixed_attribute)))))
+    (preprocessor_otherwise_clause
+      (preprocessor_do_statement
+        (declare_statement
+          (declaration_item
+            (identifier)
+            (fixed_attribute))))))
+  (preprocessor_do_statement
+    (do_specification
+      (reference
+        (identifier))
+      (do_specification_element
+        (number)
+        (number)))
+    (preprocessor_if_statement
+      (binary_expression
+        (reference
+          (identifier))
+        (number))
+      (preprocessor_simple))
+    (preprocessor_if_statement
+      (binary_expression
+        (reference
+          (identifier))
+        (number))
+      (preprocessor_simple)))
+  (preprocessor_do_statement
+    (declare_statement
+      (declaration_item
+        (identifier)
+        (fixed_attribute))))
+  (invocation_statement
+    (identifier)
+    (argument_list
+      (argument
+        (string_literal)))))

@@ -239,3 +239,39 @@ END P;
               (string_literal)))))
       (end_statement
         (identifier)))))
+
+================================================================================
+string repetition factor
+================================================================================
+P: PROC;
+   PUT LIST ((99)'-');
+   S = (3)'AB' || (8)'0'B;
+END P;
+--------------------------------------------------------------------------------
+
+(source_file
+  (labeled_statement
+    (statement_prefix
+      (identifier))
+    (procedure_statement
+      (procedure_heading)
+      (block
+        (put_statement
+          (data_spec
+            (data_list_item
+              (repeated_string
+                (number)
+                (string_literal)))))
+        (assignment_statement
+          (reference
+            (identifier))
+          (binary_expression
+            (repeated_string
+              (number)
+              (string_literal))
+            (repeated_string
+              (number)
+              (bit_literal
+                (string_literal))))))
+      (end_statement
+        (identifier)))))

@@ -117,7 +117,10 @@ module.exports = grammar({
         $.preprocessor_assignment,
         $.preprocessor_if_statement,
         $.preprocessor_do_statement,
+        $.preprocessor_select_statement,
+        $.preprocessor_procedure,
         $.preprocessor_simple,
+        $.invocation_statement,
         $.process_statement,
       ),
 
@@ -512,6 +515,10 @@ module.exports = grammar({
         ),
         ';',
       ),
+
+    // A statement-type macro invocation, e.g. BANNER('X'); or ANSWER (...); inside a
+    // %PROCEDURE. Without a preprocessor pass it looks like a call without CALL.
+    invocation_statement: ($) => prec(-1, seq(field('name', $.identifier), $.argument_list, ';')),
 
     call_statement: ($) =>
       seq(
@@ -930,7 +937,8 @@ module.exports = grammar({
           '%',
           kw('THEN'),
           $._statement,
-          optional(seq('%', kw('ELSE'), $._statement)),
+          // One token, so that a following %END or %IF is not taken as the start of %ELSE.
+          optional(seq(alias(token(prec(2, /%[ 	]*[Ee][Ll][Ss][Ee]/)), '%ELSE'), $._statement)),
         ),
       ),
 
@@ -938,11 +946,47 @@ module.exports = grammar({
       seq(
         '%',
         kw('DO'),
-        optional($.do_specification),
+        optional(choice($.do_specification, kw('SKIP'))),
         ';',
         repeat($._statement),
         '%',
         kw('END'),
+        ';',
+      ),
+
+    preprocessor_select_statement: ($) =>
+      seq(
+        '%',
+        kw('SELECT'),
+        optional(seq('(', $._expression, ')')),
+        ';',
+        repeat($.preprocessor_when_clause),
+        optional($.preprocessor_otherwise_clause),
+        '%',
+        kw('END'),
+        ';',
+      ),
+
+    preprocessor_when_clause: ($) =>
+      seq('%', kw('WHEN'), '(', commaSep1($._expression), ')', $._statement),
+
+    preprocessor_otherwise_clause: ($) =>
+      seq('%', choice(kw('OTHERWISE'), kw('OTHER')), $._statement),
+
+    // %NAME: PROCEDURE(P, ...) RETURNS(type) STATEMENT; ... %END NAME;
+    preprocessor_procedure: ($) =>
+      seq(
+        '%',
+        field('name', $.identifier),
+        ':',
+        choice(kw('PROCEDURE'), kw('PROC')),
+        optional(seq('(', optional(commaSep1($.identifier)), ')')),
+        repeat(choice(seq(kw('RETURNS'), '(', $.attribute_spec, ')'), kw('STATEMENT'))),
+        ';',
+        repeat($._statement),
+        '%',
+        kw('END'),
+        optional($.identifier),
         ';',
       ),
 
@@ -959,6 +1003,8 @@ module.exports = grammar({
           seq(kw('NOTE'), optional(seq('(', $._expression, ')'))),
           seq(kw('ACTIVATE'), commaSep1($.identifier)),
           seq(kw('DEACTIVATE'), commaSep1($.identifier)),
+          seq(kw('ITERATE'), optional($.identifier)),
+          seq(kw('LEAVE'), optional($.identifier)),
         )),
         ';',
       ),
@@ -982,6 +1028,7 @@ module.exports = grammar({
         $.string_literal,
         $.bit_literal,
         $.hex_literal,
+        $.repeated_string,
         $.reference,
         $.parenthesized_expression,
         $.unary_expression,
@@ -989,6 +1036,18 @@ module.exports = grammar({
       ),
 
     parenthesized_expression: ($) => seq('(', $._expression, ')'),
+
+    // A string repetition factor such as (99)'-' or (8)'0'B.
+    repeated_string: ($) =>
+      prec(
+        1,
+        seq(
+          '(',
+          field('factor', $.number),
+          ')',
+          field('value', choice($.string_literal, $.bit_literal, $.hex_literal)),
+        ),
+      ),
 
     // NOT/OR/concatenation accept multiple glyphs because the EBCDIC code
     // point PL/I assigns to each of these symbols is rendered differently
